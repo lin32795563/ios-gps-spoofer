@@ -51,6 +51,9 @@ htmlcov/
 coverage/
 *.lcov
 
+# User data
+favorites.json
+
 # Logs
 logs/
 *.log
