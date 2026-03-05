@@ -39,8 +39,7 @@ Install iTunes from the Microsoft Store or Apple's website. The USB driver is ne
 Open a terminal **as Administrator** and run:
 
 ```bash
-cd C:\Users\LIN\ios-gps-spoofer
-.venv\Scripts\pymobiledevice3.exe remote tunneld
+pymobiledevice3 remote tunneld
 ```
 
 Keep this window open while using the app. Not required for iOS 14–16.
@@ -50,7 +49,7 @@ Keep this window open while using the app. Not required for iOS 14–16.
 In a separate terminal:
 
 ```bash
-cd C:\Users\LIN\ios-gps-spoofer\frontend
+cd frontend
 npm run electron:start
 ```
 
