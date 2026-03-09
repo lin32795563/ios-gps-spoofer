@@ -1,18 +1,20 @@
-# iOS GPS Spoofer
+# 👋 Hi，我是 Yannis！
 
-A desktop application for simulating GPS location on iOS devices. Built with **Electron + React + TypeScript** (frontend) and **Python FastAPI** (backend), communicating over REST API and WebSocket.
+> 電機系剛畢業的軟體工程師～不定時做一些小廢物工具放在這裡 👾
+>
+> 如果這個工具有幫到你，請我喝杯咖啡的話我會非常開心 ☕
 
-Supports **iOS 14–18**, including iOS 17+ RemoteXPC tunnel mode.
+<img src="docs/paypal-qr.png" width="160" alt="PayPal QR Code" />
+
+<sub>贊助是對開發工作的支持，不涉及任何遊戲內容的買賣。本工具為非官方免費專案，所有相關版權歸版權方所有。贊助完全自願，不影響工具的任何功能使用。</sub>
 
 ---
 
-Hi，我是 Yannis，電機系剛畢業的軟體工程師～不定時做一些小廢物 👾
+# iOS GPS Spoofer
 
-如果這個工具有幫到你，請我喝杯咖啡的話我會非常開心 ☕
+A desktop application for simulating GPS location on iOS devices. Built with **Electron + React + TypeScript** (frontend) and **Python FastAPI** (backend).
 
-<img src="docs/paypal-qr.png" width="180" alt="PayPal QR Code" />
-
-> **贊助聲明**　贊助是對開發工作的支持，不涉及任何遊戲內容的買賣。本工具為非官方免費專案，所有相關版權歸版權方所有。贊助完全自願，不影響工具的任何功能使用。
+Supports **iOS 14–18**, including iOS 17+ RemoteXPC tunnel mode.
 
 ---
 
@@ -185,32 +187,6 @@ Use the search bar (top-right of the map) to find locations by:
 | Button | Click **Restore Real Location** in the control panel |
 | Unplug | Disconnect the USB cable (location restores within seconds) |
 | Restart | Restart the iPhone |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Electron, React, TypeScript, Vite |
-| Map | MapLibre GL, OpenFreeMap (no API key required) |
-| Backend | Python, FastAPI, uvicorn |
-| Device | pymobiledevice3 |
-| Communication | REST API, WebSocket |
-| Simulation | Per-device threaded PathSimulator with GPS drift |
-
-### API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/devices` | List connected devices |
-| POST | `/api/location/set` | Set GPS location |
-| POST | `/api/location/clear` | Restore real GPS |
-| POST | `/api/simulation/start` | Start path simulation |
-| POST | `/api/simulation/pause` | Pause simulation |
-| POST | `/api/simulation/resume` | Resume simulation |
-| POST | `/api/simulation/stop` | Stop simulation |
-| WS | `/ws` | Real-time simulation updates |
 
 ---
 
