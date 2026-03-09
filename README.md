@@ -176,13 +176,14 @@ Use the search bar (top-right of the map) to find locations by:
 
 ## Support
 
-Hi, I'm Yannis — a software engineer who just graduated from an EE program. I build random little tools in my spare time and put them here for free.
+Hi，我是 Yannis，電機系剛畢業的軟體工程師～不定時做一些小廢物工具放在這裡 👾
 
-If this tool helped you out, consider buying me a coffee ☕ — it's entirely optional and doesn't affect any features.
+如果這個工具有幫到你，請我喝杯咖啡的話我會非常開心 ☕
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕%20Support-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/yannis_lin)
+<img src="docs/paypal-qr.png" width="200" alt="PayPal QR Code" />
 
-> Sponsorship supports development only and does not involve any in-game transactions. This is an unofficial free tool — all related copyrights belong to their respective owners.
+> **贊助聲明**
+> 贊助是對開發工作的支持，不涉及任何遊戲內容的買賣。本工具為非官方免費專案，所有相關版權歸版權方所有。贊助完全自願，不影響工具的任何功能使用。
 
 ---
 
