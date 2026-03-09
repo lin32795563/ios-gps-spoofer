@@ -4,7 +4,7 @@
 >
 > 如果這個工具有幫到你，請我喝杯咖啡的話我會非常開心 ☕
 
-<img src="docs/paypal-qr.png" width="160" alt="PayPal QR Code" />
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/yannislin)
 
 <sub>贊助是對開發工作的支持，不涉及任何遊戲內容的買賣。本工具為非官方免費專案，所有相關版權歸版權方所有。贊助完全自願，不影響工具的任何功能使用。</sub>
 
