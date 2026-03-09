@@ -176,11 +176,13 @@ Use the search bar (top-right of the map) to find locations by:
 
 ## Support
 
-If this tool has been helpful to you, consider buying me a coffee — it keeps the development going!
+Hi, I'm Yannis — a software engineer who just graduated from an EE program. I build random little tools in my spare time and put them here for free.
+
+If this tool helped you out, consider buying me a coffee ☕ — it's entirely optional and doesn't affect any features.
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕%20Support-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/yannis_lin)
 
-Sponsorship is entirely voluntary and does not affect access to any features.
+> Sponsorship supports development only and does not involve any in-game transactions. This is an unofficial free tool — all related copyrights belong to their respective owners.
 
 ---
 
