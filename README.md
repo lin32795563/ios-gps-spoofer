@@ -136,31 +136,7 @@ Use the search bar (top-right of the map) to find locations by:
 
 ---
 
-## Architecture
-
-```
-┌─────────────────────────────────────┐
-│         Electron Application        │
-│  React + TypeScript + MapLibre GL   │
-└────────────────┬────────────────────┘
-                 │  REST API + WebSocket
-                 │  http://127.0.0.1:8456
-┌────────────────▼────────────────────┐
-│         FastAPI Backend             │
-│  ┌────────────────────────────────┐ │
-│  │  DeviceManager                 │ │
-│  │  LocationService               │ │
-│  │  PathSimulator (per device)    │ │
-│  └────────────────────────────────┘ │
-└──────────┬──────────────────────────┘
-           │  pymobiledevice3
-    ┌──────┴──────┐
-    │  iPhone(s)  │
-    │  USB / Tunnel│
-    └─────────────┘
-```
-
-### Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
