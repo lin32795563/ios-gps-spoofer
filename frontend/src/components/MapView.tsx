@@ -33,6 +33,12 @@ const DEFAULT_ZOOM = 13;
 // OpenFreeMap style URL (free, no API key needed)
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
+interface DeviceLocationEntry {
+  coordinate: Coordinate;
+  isSelected: boolean;
+  name: string;
+}
+
 interface MapViewProps {
   currentLocation: Coordinate | null;
   pickedLocation: Coordinate | null;
@@ -42,6 +48,7 @@ interface MapViewProps {
   onTeleport: () => void;
   onCancelPick: () => void;
   canTeleport: boolean;
+  deviceLocations?: Map<string, DeviceLocationEntry>;
 }
 
 /**
@@ -141,6 +148,7 @@ export function MapView({
   onTeleport,
   onCancelPick,
   canTeleport,
+  deviceLocations,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
   const [cursorCoords, setCursorCoords] = useState<{
@@ -251,8 +259,8 @@ export function MapView({
             </Marker>
           ))}
 
-        {/* Current simulated location marker (blue) */}
-        {currentLocation && (
+        {/* Current simulated location marker (blue) -- shown when no multi-device data */}
+        {currentLocation && !deviceLocations?.size && (
           <Marker
             latitude={currentLocation.latitude}
             longitude={currentLocation.longitude}
@@ -261,6 +269,25 @@ export function MapView({
             <div className="maplibre-current-marker" />
           </Marker>
         )}
+
+        {/* Multi-device location markers */}
+        {deviceLocations && Array.from(deviceLocations.entries()).map(([udid, entry]) => (
+          <Marker
+            key={`device-${udid}`}
+            latitude={entry.coordinate.latitude}
+            longitude={entry.coordinate.longitude}
+            anchor="center"
+          >
+            <div
+              className={`maplibre-device-marker ${entry.isSelected ? "maplibre-device-marker--selected" : ""}`}
+              title={entry.name}
+            >
+              <span className="maplibre-device-marker__label">
+                {entry.name.length > 6 ? entry.name.slice(-6) : entry.name}
+              </span>
+            </div>
+          </Marker>
+        ))}
 
         {/* Picked location marker (red) with teleport popup */}
         {pickedLocation && (
@@ -317,6 +344,26 @@ export function MapView({
       {isDrawingPath && (
         <div className="map-drawing-indicator">
           繪製模式：點擊地圖新增路徑點
+        </div>
+      )}
+
+      {pathPoints.length > 50 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            backgroundColor: "rgba(0, 0, 0, 0.65)",
+            color: "#fff",
+            padding: "6px 12px",
+            borderRadius: 4,
+            fontSize: 12,
+            lineHeight: 1.4,
+            zIndex: 1000,
+            pointerEvents: "none",
+          }}
+        >
+          {`路徑點 ${pathPoints.length} 個（超過 50 個後序號標記已隱藏）`}
         </div>
       )}
     </div>

@@ -1,8 +1,8 @@
 /**
- * Tests for the ControlPanel component.
+ * Tests for the ControlPanel component (multi-select version).
  *
  * Verifies:
- * - Conditional rendering based on device state
+ * - Conditional rendering based on selection count
  * - Speed preset and slider controls
  * - Simulation state-dependent button rendering
  * - Progress display
@@ -14,28 +14,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ControlPanel } from "../components/ControlPanel";
 import type {
-  DeviceInfo,
+  DeviceSessionState,
   FavoriteLocation,
   SimulationProgress,
 } from "../types/api";
-
-function makeDevice(overrides: Partial<DeviceInfo> = {}): DeviceInfo {
-  return {
-    udid: "test-udid",
-    name: "Test iPhone",
-    product_type: "iPhone14,5",
-    product_version: "17.2",
-    build_version: "21C62",
-    device_class: "iPhone",
-    state: "ready",
-    ios_category: "TUNNEL",
-    is_ready: true,
-    error_message: null,
-    connected_at: "2024-01-01T00:00:00Z",
-    last_seen_at: "2024-01-01T00:00:00Z",
-    ...overrides,
-  };
-}
+import { createDefaultSession } from "../types/api";
 
 function makeProgress(
   overrides: Partial<SimulationProgress> = {},
@@ -69,6 +52,20 @@ const defaultHandlers = {
   onSelectFavorite: vi.fn(),
 };
 
+const baseProps = {
+  selectedCount: 0,
+  anyDeviceReady: false,
+  simState: "idle" as const,
+  simProgress: null as SimulationProgress | null,
+  speedKmh: 5,
+  isDrawingPath: false,
+  pathPointCount: 0,
+  favorites: [] as FavoriteLocation[],
+  deviceSessions: new Map<string, DeviceSessionState>(),
+  selectedUdids: new Set<string>(),
+  ...defaultHandlers,
+};
+
 beforeEach(() => {
   Object.values(defaultHandlers).forEach((fn) => fn.mockClear());
 });
@@ -76,100 +73,58 @@ beforeEach(() => {
 describe("ControlPanel", () => {
   describe("no device selected", () => {
     it("should show prompt to select device", () => {
-      render(
-        <ControlPanel
-          selectedDevice={null}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
-        />,
-      );
+      render(<ControlPanel {...baseProps} />);
 
-      expect(screen.getByText(/Select a device/)).toBeInTheDocument();
+      expect(screen.getByText("請先選擇裝置")).toBeInTheDocument();
     });
 
     it("should not show simulation controls", () => {
-      render(
-        <ControlPanel
-          selectedDevice={null}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
-        />,
-      );
+      render(<ControlPanel {...baseProps} />);
 
-      expect(screen.queryByText("Restore Real Location")).toBeNull();
-      expect(screen.queryByText("Start")).toBeNull();
+      expect(screen.queryByText("恢復真實定位")).toBeNull();
+      expect(screen.queryByText("開始模擬")).toBeNull();
     });
   });
 
-  describe("device not ready", () => {
-    it("should show warning when device is not ready", () => {
-      const device = makeDevice({ is_ready: false, state: "connected" });
-
+  describe("device selected but not ready", () => {
+    it("should show warning when devices are not ready", () => {
       render(
         <ControlPanel
-          selectedDevice={device}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={false}
         />,
       );
 
-      expect(screen.getByText(/not ready/)).toBeInTheDocument();
+      expect(screen.getByText("所選裝置尚未就緒")).toBeInTheDocument();
     });
+  });
 
-    it("should show error message if present", () => {
-      const device = makeDevice({
-        is_ready: false,
-        error_message: "DDI failed",
-      });
-
+  describe("selected count display", () => {
+    it("should display selected count", () => {
       render(
         <ControlPanel
-          selectedDevice={device}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={3}
+          anyDeviceReady={true}
         />,
       );
 
-      expect(screen.getByText("DDI failed")).toBeInTheDocument();
+      expect(screen.getByText("已選 3 台裝置")).toBeInTheDocument();
     });
   });
 
   describe("location controls", () => {
-    it("should render Restore Real Location button", () => {
+    it("should render restore button", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      expect(screen.getByText("Restore Real Location")).toBeInTheDocument();
+      expect(screen.getByText("恢復真實定位")).toBeInTheDocument();
     });
 
     it("should call onClearLocation when clicked", async () => {
@@ -177,108 +132,84 @@ describe("ControlPanel", () => {
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      await user.click(screen.getByText("Restore Real Location"));
+      await user.click(screen.getByText("恢復真實定位"));
       expect(defaultHandlers.onClearLocation).toHaveBeenCalled();
     });
 
     it("should disable restore button during simulation", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           simState="running"
           simProgress={makeProgress()}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("Restore Real Location")).toBeDisabled();
+      expect(screen.getByText("恢復真實定位")).toBeDisabled();
     });
   });
 
   describe("path drawing", () => {
-    it("should show Draw Path button", () => {
+    it("should show draw path button", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      expect(screen.getByText("Draw Path")).toBeInTheDocument();
+      expect(screen.getByText("繪製路徑")).toBeInTheDocument();
     });
 
-    it("should show Stop Drawing when drawing", () => {
+    it("should show end drawing when drawing", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           isDrawingPath={true}
           pathPointCount={3}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("Stop Drawing")).toBeInTheDocument();
+      expect(screen.getByText("結束繪製")).toBeInTheDocument();
     });
 
     it("should show point count when path has points", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("5 points")).toBeInTheDocument();
+      expect(screen.getByText(/5 個路徑點/)).toBeInTheDocument();
     });
 
-    it("should call onClearPath when Clear Path is clicked", async () => {
+    it("should call onClearPath when clear path is clicked", async () => {
       const user = userEvent.setup();
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           pathPointCount={3}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      await user.click(screen.getByText("Clear Path"));
+      await user.click(screen.getByText("清除路徑"));
       expect(defaultHandlers.onClearPath).toHaveBeenCalled();
     });
   });
@@ -287,14 +218,10 @@ describe("ControlPanel", () => {
     it("should display current speed", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           speedKmh={15}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
@@ -304,21 +231,16 @@ describe("ControlPanel", () => {
     it("should render speed preset buttons", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      expect(screen.getByText("Walking")).toBeInTheDocument();
-      expect(screen.getByText("Cycling")).toBeInTheDocument();
-      expect(screen.getByText("Driving")).toBeInTheDocument();
-      expect(screen.getByText("Fast")).toBeInTheDocument();
+      expect(screen.getByText("步行")).toBeInTheDocument();
+      expect(screen.getByText("騎車")).toBeInTheDocument();
+      expect(screen.getByText("開車")).toBeInTheDocument();
+      expect(screen.getByText("高速")).toBeInTheDocument();
     });
 
     it("should call onSpeedChange when preset is clicked", async () => {
@@ -326,130 +248,135 @@ describe("ControlPanel", () => {
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      await user.click(screen.getByText("Cycling"));
+      await user.click(screen.getByText("騎車"));
       expect(defaultHandlers.onSpeedChange).toHaveBeenCalledWith(15);
     });
   });
 
   describe("simulation controls", () => {
-    it("should show Start button in idle state", () => {
+    it("should show start button in idle state", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("Start")).toBeInTheDocument();
+      expect(screen.getByText("開始模擬")).toBeInTheDocument();
     });
 
-    it("should disable Start when less than 2 path points", () => {
+    it("should disable start when less than 2 path points", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           pathPointCount={1}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("Start")).toBeDisabled();
+      expect(screen.getByText("開始模擬")).toBeDisabled();
     });
 
-    it("should show Pause and Stop during running", () => {
+    it("should show pause and stop during running", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           simState="running"
           simProgress={makeProgress()}
-          speedKmh={5}
-          isDrawingPath={false}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("Pause")).toBeInTheDocument();
-      expect(screen.getByText("Stop")).toBeInTheDocument();
+      expect(screen.getByText("暫停")).toBeInTheDocument();
+      expect(screen.getByText("停止")).toBeInTheDocument();
     });
 
-    it("should show Resume and Stop when paused", () => {
+    it("should show resume and stop when paused", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           simState="paused"
           simProgress={makeProgress({ state: "paused" })}
-          speedKmh={5}
-          isDrawingPath={false}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      expect(screen.getByText("Resume")).toBeInTheDocument();
-      expect(screen.getByText("Stop")).toBeInTheDocument();
+      expect(screen.getByText("繼續")).toBeInTheDocument();
+      expect(screen.getByText("停止")).toBeInTheDocument();
     });
 
-    it("should call onStartSimulation when Start clicked", async () => {
+    it("should show restart button on completed", () => {
+      render(
+        <ControlPanel
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
+          simState="completed"
+          pathPointCount={5}
+        />,
+      );
+
+      expect(screen.getByText("重新開始")).toBeInTheDocument();
+    });
+
+    it("should show retry button on error", () => {
+      render(
+        <ControlPanel
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
+          simState="error"
+          pathPointCount={5}
+        />,
+      );
+
+      expect(screen.getByText("重試模擬")).toBeInTheDocument();
+    });
+
+    it("should call onStartSimulation when start clicked", async () => {
       const user = userEvent.setup();
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      await user.click(screen.getByText("Start"));
+      await user.click(screen.getByText("開始模擬"));
       expect(defaultHandlers.onStartSimulation).toHaveBeenCalled();
     });
 
-    it("should call onPause when Pause clicked", async () => {
+    it("should call onPause when pause clicked", async () => {
       const user = userEvent.setup();
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           simState="running"
           simProgress={makeProgress()}
-          speedKmh={5}
-          isDrawingPath={false}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
-      await user.click(screen.getByText("Pause"));
+      await user.click(screen.getByText("暫停"));
       expect(defaultHandlers.onPause).toHaveBeenCalled();
     });
   });
@@ -458,7 +385,9 @@ describe("ControlPanel", () => {
     it("should show progress bar and details when simulation active", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           simState="running"
           simProgress={makeProgress({
             fraction_complete: 0.5,
@@ -468,35 +397,48 @@ describe("ControlPanel", () => {
             segment_index: 5,
             total_segments: 10,
           })}
-          speedKmh={5}
-          isDrawingPath={false}
           pathPointCount={5}
-          favorites={[]}
-          {...defaultHandlers}
         />,
       );
 
       expect(screen.getByText("50.0%")).toBeInTheDocument();
       expect(screen.getByText("05:00")).toBeInTheDocument();
-      expect(screen.getByText("1.50km / 3.00km")).toBeInTheDocument();
-      expect(screen.getByText("Seg 6/10")).toBeInTheDocument();
+      expect(screen.getByText(/1\.50km/)).toBeInTheDocument();
     });
 
     it("should not show progress when simProgress is null", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      expect(screen.queryByText("Progress")).toBeNull();
+      expect(screen.queryByText("模擬進度")).toBeNull();
+    });
+  });
+
+  describe("device progress summary", () => {
+    it("should show per-device progress when multiple devices selected", () => {
+      const sessions = new Map<string, DeviceSessionState>();
+      sessions.set("udid-aaaa1111", { ...createDefaultSession(), simState: "running", simProgress: makeProgress({ fraction_complete: 0.3 }) });
+      sessions.set("udid-bbbb2222", { ...createDefaultSession(), simState: "paused" });
+
+      render(
+        <ControlPanel
+          {...baseProps}
+          selectedCount={2}
+          anyDeviceReady={true}
+          simState="running"
+          deviceSessions={sessions}
+          selectedUdids={new Set(["udid-aaaa1111", "udid-bbbb2222"])}
+        />,
+      );
+
+      expect(screen.getByText("各裝置進度")).toBeInTheDocument();
+      expect(screen.getByText("...aaaa1111")).toBeInTheDocument();
+      expect(screen.getByText("...bbbb2222")).toBeInTheDocument();
     });
   });
 
@@ -504,18 +446,13 @@ describe("ControlPanel", () => {
     it("should show empty state when no favorites", () => {
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
-          favorites={[]}
-          {...defaultHandlers}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
         />,
       );
 
-      expect(screen.getByText("No saved locations.")).toBeInTheDocument();
+      expect(screen.getByText("尚無收藏地點")).toBeInTheDocument();
     });
 
     it("should render favorite locations", () => {
@@ -526,14 +463,10 @@ describe("ControlPanel", () => {
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           favorites={favorites}
-          {...defaultHandlers}
         />,
       );
 
@@ -547,14 +480,10 @@ describe("ControlPanel", () => {
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           favorites={[fav]}
-          {...defaultHandlers}
         />,
       );
 
@@ -568,19 +497,15 @@ describe("ControlPanel", () => {
 
       render(
         <ControlPanel
-          selectedDevice={makeDevice()}
-          simState="idle"
-          simProgress={null}
-          speedKmh={5}
-          isDrawingPath={false}
-          pathPointCount={0}
+          {...baseProps}
+          selectedCount={1}
+          anyDeviceReady={true}
           favorites={[fav]}
-          {...defaultHandlers}
         />,
       );
 
-      await user.click(screen.getByLabelText("Remove Home"));
-      expect(defaultHandlers.onRemoveFavorite).toHaveBeenCalledWith(0);
+      await user.click(screen.getByLabelText("刪除 Home"));
+      expect(defaultHandlers.onRemoveFavorite).toHaveBeenCalledWith(fav);
     });
   });
 });

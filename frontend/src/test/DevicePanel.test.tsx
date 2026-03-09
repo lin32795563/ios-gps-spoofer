@@ -1,19 +1,22 @@
 /**
- * Tests for the DevicePanel component.
+ * Tests for the DevicePanel component (multi-select version).
  *
  * Verifies:
  * - Empty state rendering
  * - Device list rendering with correct details
- * - Device selection highlighting
- * - Click handler invocation
+ * - Multi-select highlighting via checkbox
+ * - Toggle handler invocation
+ * - Select all / select none
  * - Error message display
+ * - Simulation state icon display
  */
 
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DevicePanel } from "../components/DevicePanel";
-import type { DeviceInfo } from "../types/api";
+import type { DeviceInfo, DeviceSessionState } from "../types/api";
+import { createDefaultSession } from "../types/api";
 
 function makeDevice(overrides: Partial<DeviceInfo> = {}): DeviceInfo {
   return {
@@ -33,18 +36,28 @@ function makeDevice(overrides: Partial<DeviceInfo> = {}): DeviceInfo {
   };
 }
 
+const emptyProps = {
+  devices: [] as DeviceInfo[],
+  selectedUdids: new Set<string>(),
+  onToggleDevice: vi.fn(),
+  deviceSessions: new Map<string, DeviceSessionState>(),
+  onSelectAll: vi.fn(),
+  onSelectNone: vi.fn(),
+};
+
 describe("DevicePanel", () => {
   it("should render empty state when no devices", () => {
-    render(
-      <DevicePanel
-        devices={[]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
-      />,
-    );
+    render(<DevicePanel {...emptyProps} />);
 
-    expect(screen.getByText("No devices connected.")).toBeInTheDocument();
-    expect(screen.getByText(/Connect an iOS device/)).toBeInTheDocument();
+    expect(screen.getByText("尚未連接任何裝置")).toBeInTheDocument();
+    expect(screen.getByText(/請透過 USB 連接 iOS 裝置/)).toBeInTheDocument();
+  });
+
+  it("should not show select all/none when empty", () => {
+    render(<DevicePanel {...emptyProps} />);
+
+    expect(screen.queryByText("全選")).toBeNull();
+    expect(screen.queryByText("全不選")).toBeNull();
   });
 
   it("should render device name and version", () => {
@@ -52,9 +65,8 @@ describe("DevicePanel", () => {
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
@@ -62,18 +74,17 @@ describe("DevicePanel", () => {
     expect(screen.getByText("iOS 17.2")).toBeInTheDocument();
   });
 
-  it("should show 'Unknown Device' when name is empty", () => {
+  it("should show '未知裝置' when name is empty", () => {
     const device = makeDevice({ name: "" });
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
-    expect(screen.getByText("Unknown Device")).toBeInTheDocument();
+    expect(screen.getByText("未知裝置")).toBeInTheDocument();
   });
 
   it("should highlight selected device", () => {
@@ -81,9 +92,9 @@ describe("DevicePanel", () => {
 
     const { container } = render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid="selected-udid"
-        onSelectDevice={vi.fn()}
+        selectedUdids={new Set(["selected-udid"])}
       />,
     );
 
@@ -96,9 +107,9 @@ describe("DevicePanel", () => {
 
     const { container } = render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid="selected-udid"
-        onSelectDevice={vi.fn()}
+        selectedUdids={new Set(["selected-udid"])}
       />,
     );
 
@@ -106,22 +117,22 @@ describe("DevicePanel", () => {
     expect(button).toBeNull();
   });
 
-  it("should call onSelectDevice when device is clicked", async () => {
+  it("should call onToggleDevice when device is clicked", async () => {
     const user = userEvent.setup();
-    const handleSelect = vi.fn();
+    const handleToggle = vi.fn();
     const device = makeDevice({ udid: "click-me" });
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={handleSelect}
+        onToggleDevice={handleToggle}
       />,
     );
 
     await user.click(screen.getByText("Test iPhone"));
 
-    expect(handleSelect).toHaveBeenCalledWith("click-me");
+    expect(handleToggle).toHaveBeenCalledWith("click-me");
   });
 
   it("should display error message when present", () => {
@@ -133,9 +144,8 @@ describe("DevicePanel", () => {
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
@@ -147,9 +157,8 @@ describe("DevicePanel", () => {
 
     const { container } = render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
@@ -165,9 +174,8 @@ describe("DevicePanel", () => {
 
     const { container } = render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
@@ -184,9 +192,8 @@ describe("DevicePanel", () => {
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={devices}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
@@ -200,26 +207,106 @@ describe("DevicePanel", () => {
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
     expect(screen.getByText("iPad")).toBeInTheDocument();
   });
 
-  it("should format device state for display", () => {
-    const device = makeDevice({ state: "tunnel_active" });
+  it("should show select all/none buttons when devices exist", () => {
+    const device = makeDevice();
 
     render(
       <DevicePanel
+        {...emptyProps}
         devices={[device]}
-        selectedUdid={null}
-        onSelectDevice={vi.fn()}
       />,
     );
 
-    expect(screen.getByText("Tunnel Active")).toBeInTheDocument();
+    expect(screen.getByText("全選")).toBeInTheDocument();
+    expect(screen.getByText("全不選")).toBeInTheDocument();
+  });
+
+  it("should call onSelectAll when clicked", async () => {
+    const user = userEvent.setup();
+    const handleSelectAll = vi.fn();
+    const device = makeDevice();
+
+    render(
+      <DevicePanel
+        {...emptyProps}
+        devices={[device]}
+        onSelectAll={handleSelectAll}
+      />,
+    );
+
+    await user.click(screen.getByText("全選"));
+    expect(handleSelectAll).toHaveBeenCalled();
+  });
+
+  it("should call onSelectNone when clicked", async () => {
+    const user = userEvent.setup();
+    const handleSelectNone = vi.fn();
+    const device = makeDevice();
+
+    render(
+      <DevicePanel
+        {...emptyProps}
+        devices={[device]}
+        onSelectNone={handleSelectNone}
+      />,
+    );
+
+    await user.click(screen.getByText("全不選"));
+    expect(handleSelectNone).toHaveBeenCalled();
+  });
+
+  it("should show running sim state icon", () => {
+    const device = makeDevice({ udid: "d1" });
+    const sessions = new Map<string, DeviceSessionState>();
+    sessions.set("d1", { ...createDefaultSession(), simState: "running" });
+
+    const { container } = render(
+      <DevicePanel
+        {...emptyProps}
+        devices={[device]}
+        deviceSessions={sessions}
+      />,
+    );
+
+    const icon = container.querySelector(".sim-state-icon--running");
+    expect(icon).toBeInTheDocument();
+  });
+
+  it("should show checkbox checked for selected devices", () => {
+    const device = makeDevice({ udid: "d1" });
+
+    render(
+      <DevicePanel
+        {...emptyProps}
+        devices={[device]}
+        selectedUdids={new Set(["d1"])}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox).toBeChecked();
+  });
+
+  it("should show checkbox unchecked for unselected devices", () => {
+    const device = makeDevice({ udid: "d1" });
+
+    render(
+      <DevicePanel
+        {...emptyProps}
+        devices={[device]}
+        selectedUdids={new Set()}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox).not.toBeChecked();
   });
 });

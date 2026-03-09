@@ -1,11 +1,14 @@
+import type { SimStateLabel } from "../types/api";
+
 interface StatusBarProps {
   backendReady: boolean;
   wsConnected: boolean;
   deviceCount: number;
-  simState: string;
+  selectedCount: number;
+  simState: SimStateLabel;
 }
 
-function formatSimState(state: string): string {
+function formatSimState(state: SimStateLabel): string {
   switch (state) {
     case "idle":
       return "閒置";
@@ -13,8 +16,10 @@ function formatSimState(state: string): string {
       return "模擬中";
     case "paused":
       return "已暫停";
-    case "stopped":
-      return "已停止";
+    case "completed":
+      return "已完成";
+    case "error":
+      return "錯誤";
     default:
       return state;
   }
@@ -24,6 +29,7 @@ export function StatusBar({
   backendReady,
   wsConnected,
   deviceCount,
+  selectedCount,
   simState,
 }: StatusBarProps) {
   return (
@@ -48,7 +54,7 @@ export function StatusBar({
 
       <div className="status-bar__right">
         <span className="status-label">
-          裝置：{deviceCount}
+          裝置：{deviceCount} (已選 {selectedCount})
         </span>
         <span className="status-separator" />
         <span className="status-label">

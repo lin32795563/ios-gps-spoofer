@@ -1,18 +1,22 @@
 import { useCallback, useRef } from "react";
 import type {
-  DeviceInfo,
+  DeviceSessionState,
   FavoriteLocation,
+  SimStateLabel,
   SimulationProgress,
 } from "../types/api";
 
 interface ControlPanelProps {
-  selectedDevice: DeviceInfo | null;
-  simState: string;
+  selectedCount: number;
+  anyDeviceReady: boolean;
+  simState: SimStateLabel;
   simProgress: SimulationProgress | null;
   speedKmh: number;
   isDrawingPath: boolean;
   pathPointCount: number;
   favorites: FavoriteLocation[];
+  deviceSessions: Map<string, DeviceSessionState>;
+  selectedUdids: Set<string>;
   onStartSimulation: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -23,7 +27,7 @@ interface ControlPanelProps {
   onClearPath: () => void;
   onGPXLoad: (content: string) => void;
   onAddFavorite: (name: string, lat: number, lng: number) => void;
-  onRemoveFavorite: (index: number) => void;
+  onRemoveFavorite: (fav: FavoriteLocation) => void;
   onSelectFavorite: (fav: FavoriteLocation) => void;
 }
 
@@ -47,14 +51,62 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2)}km`;
 }
 
+function DeviceProgressSummary({
+  deviceSessions,
+  selectedUdids,
+}: {
+  deviceSessions: Map<string, DeviceSessionState>;
+  selectedUdids: Set<string>;
+}) {
+  const entries = Array.from(selectedUdids)
+    .map(udid => {
+      const session = deviceSessions.get(udid);
+      if (!session || session.simState === "idle") return null;
+      return { udid, session };
+    })
+    .filter((e): e is { udid: string; session: DeviceSessionState } => e !== null);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="device-progress-summary">
+      <h4 className="section-subtitle">各裝置進度</h4>
+      {entries.map(({ udid, session }) => (
+        <div key={udid} className="device-progress-row">
+          <span className="device-progress-row__label">
+            ...{udid.slice(-8)}
+          </span>
+          <span className={`device-progress-row__state device-progress-row__state--${session.simState}`}>
+            {session.simState === "running" ? "模擬中" :
+             session.simState === "paused" ? "已暫停" :
+             session.simState === "completed" ? "已完成" :
+             session.simState === "error" ? "錯誤" : session.simState}
+          </span>
+          {session.simProgress && (
+            <div className="device-progress-row__bar-container">
+              <div
+                className="device-progress-row__bar-fill"
+                style={{ width: `${(session.simProgress.fraction_complete * 100).toFixed(1)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ControlPanel({
-  selectedDevice,
+  selectedCount,
+  anyDeviceReady,
   simState,
   simProgress,
   speedKmh,
   isDrawingPath,
   pathPointCount,
   favorites,
+  deviceSessions,
+  selectedUdids,
   onStartSimulation,
   onPause,
   onResume,
@@ -74,7 +126,6 @@ export function ControlPanel({
   const favLngRef = useRef<HTMLInputElement>(null);
 
   const isSimRunning = simState === "running" || simState === "paused";
-  const deviceReady = selectedDevice?.is_ready === true;
 
   const handleGPXFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,24 +172,29 @@ export function ControlPanel({
 
   return (
     <div className="control-panel">
-      {!selectedDevice && (
+      {selectedCount === 0 && (
         <div className="control-section">
           <p className="empty-hint">請先選擇裝置</p>
         </div>
       )}
 
-      {selectedDevice && !deviceReady && (
+      {selectedCount > 0 && !anyDeviceReady && (
         <div className="control-section">
           <p className="warning-text">
-            裝置尚未就緒。狀態：{selectedDevice.state}
+            所選裝置尚未就緒
           </p>
-          {selectedDevice.error_message && (
-            <p className="error-text">{selectedDevice.error_message}</p>
-          )}
         </div>
       )}
 
-      {deviceReady && (
+      {selectedCount > 0 && (
+        <div className="control-section">
+          <p className="selected-count-label">
+            已選 {selectedCount} 台裝置
+          </p>
+        </div>
+      )}
+
+      {anyDeviceReady && (
         <>
           {/* 定位設定 */}
           <div className="control-section">
@@ -250,6 +306,16 @@ export function ControlPanel({
                   開始模擬
                 </button>
               )}
+              {simState === "completed" && (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={onStartSimulation}
+                  disabled={pathPointCount < 2}
+                >
+                  重新開始
+                </button>
+              )}
               {simState === "running" && (
                 <>
                   <button
@@ -286,10 +352,20 @@ export function ControlPanel({
                   </button>
                 </>
               )}
+              {simState === "error" && (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={onStartSimulation}
+                  disabled={pathPointCount < 2}
+                >
+                  重試模擬
+                </button>
+              )}
             </div>
           </div>
 
-          {/* 模擬進度 */}
+          {/* 模擬進度（主要裝置） */}
           {simProgress && (
             <div className="control-section progress-section">
               <h3 className="section-title">模擬進度</h3>
@@ -315,6 +391,16 @@ export function ControlPanel({
                   {simProgress.total_segments}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* 各裝置進度摘要 (多選 > 1 時顯示) */}
+          {selectedUdids.size > 1 && (
+            <div className="control-section">
+              <DeviceProgressSummary
+                deviceSessions={deviceSessions}
+                selectedUdids={selectedUdids}
+              />
             </div>
           )}
 
@@ -370,7 +456,7 @@ export function ControlPanel({
                   <button
                     type="button"
                     className="btn btn--icon btn--danger"
-                    onClick={() => onRemoveFavorite(index)}
+                    onClick={() => onRemoveFavorite(fav)}
                     title="刪除收藏"
                     aria-label={`刪除 ${fav.name}`}
                   >

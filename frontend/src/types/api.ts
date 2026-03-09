@@ -105,6 +105,32 @@ export interface FavoriteListResponse {
 }
 
 // ------------------------------------------------------------------
+// Per-device session state (multi-device support)
+// ------------------------------------------------------------------
+
+export type SimStateLabel = 'idle' | 'running' | 'paused' | 'completed' | 'error';
+
+export interface DeviceSessionState {
+  simState: SimStateLabel;
+  simProgress: SimulationProgress | null;
+  currentLocation: Coordinate | null;
+  pathPoints: Coordinate[];
+  isDrawingPath: boolean;
+  speedKmh: number;
+}
+
+export function createDefaultSession(): DeviceSessionState {
+  return {
+    simState: 'idle',
+    simProgress: null,
+    currentLocation: null,
+    pathPoints: [],
+    isDrawingPath: false,
+    speedKmh: 10,
+  };
+}
+
+// ------------------------------------------------------------------
 // Generic responses
 // ------------------------------------------------------------------
 

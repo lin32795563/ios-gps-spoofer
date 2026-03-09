@@ -1,10 +1,10 @@
 /**
- * Tests for the StatusBar component.
+ * Tests for the StatusBar component (multi-select version).
  *
  * Verifies:
  * - Backend connection status display
  * - WebSocket connection status display
- * - Device count display
+ * - Device count and selected count display
  * - Simulation state display
  * - Correct CSS classes for status indicators
  */
@@ -13,120 +13,79 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { StatusBar } from "../components/StatusBar";
 
+const baseProps = {
+  backendReady: true,
+  wsConnected: true,
+  deviceCount: 1,
+  selectedCount: 0,
+  simState: "idle" as const,
+};
+
 describe("StatusBar", () => {
   it("should show backend connected when healthy", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={1}
-        simState="idle"
-      />,
-    );
+    render(<StatusBar {...baseProps} />);
 
-    expect(screen.getByText("Backend: Connected")).toBeInTheDocument();
+    expect(screen.getByText(/後端：已連線/)).toBeInTheDocument();
   });
 
   it("should show backend disconnected when unhealthy", () => {
     render(
-      <StatusBar
-        backendReady={false}
-        wsConnected={false}
-        deviceCount={0}
-        simState="idle"
-      />,
+      <StatusBar {...baseProps} backendReady={false} wsConnected={false} deviceCount={0} />,
     );
 
-    expect(screen.getByText("Backend: Disconnected")).toBeInTheDocument();
+    expect(screen.getByText(/後端：未連線/)).toBeInTheDocument();
   });
 
   it("should show WebSocket connected status", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={0}
-        simState="idle"
-      />,
-    );
+    render(<StatusBar {...baseProps} />);
 
-    expect(screen.getByText("WebSocket: Connected")).toBeInTheDocument();
+    expect(screen.getByText(/WebSocket：已連線/)).toBeInTheDocument();
   });
 
   it("should show WebSocket disconnected status", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={false}
-        deviceCount={0}
-        simState="idle"
-      />,
-    );
+    render(<StatusBar {...baseProps} wsConnected={false} />);
 
-    expect(screen.getByText("WebSocket: Disconnected")).toBeInTheDocument();
+    expect(screen.getByText(/WebSocket：未連線/)).toBeInTheDocument();
   });
 
-  it("should show device count", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={3}
-        simState="idle"
-      />,
-    );
+  it("should show device count and selected count", () => {
+    render(<StatusBar {...baseProps} deviceCount={3} selectedCount={2} />);
 
-    expect(screen.getByText("Devices: 3")).toBeInTheDocument();
+    expect(screen.getByText(/裝置：3 \(已選 2\)/)).toBeInTheDocument();
   });
 
   it("should show simulation state idle", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={0}
-        simState="idle"
-      />,
-    );
+    render(<StatusBar {...baseProps} />);
 
-    expect(screen.getByText("Simulation: Idle")).toBeInTheDocument();
+    expect(screen.getByText(/模擬：閒置/)).toBeInTheDocument();
   });
 
   it("should show simulation state running", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={1}
-        simState="running"
-      />,
-    );
+    render(<StatusBar {...baseProps} simState="running" />);
 
-    expect(screen.getByText("Simulation: Running")).toBeInTheDocument();
+    expect(screen.getByText(/模擬：模擬中/)).toBeInTheDocument();
   });
 
   it("should show simulation state paused", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={1}
-        simState="paused"
-      />,
-    );
+    render(<StatusBar {...baseProps} simState="paused" />);
 
-    expect(screen.getByText("Simulation: Paused")).toBeInTheDocument();
+    expect(screen.getByText(/模擬：已暫停/)).toBeInTheDocument();
+  });
+
+  it("should show simulation state completed", () => {
+    render(<StatusBar {...baseProps} simState="completed" />);
+
+    expect(screen.getByText(/模擬：已完成/)).toBeInTheDocument();
+  });
+
+  it("should show simulation state error", () => {
+    render(<StatusBar {...baseProps} simState="error" />);
+
+    expect(screen.getByText(/模擬：錯誤/)).toBeInTheDocument();
   });
 
   it("should use green indicator for healthy backend", () => {
-    const { container } = render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={0}
-        simState="idle"
-      />,
-    );
+    const { container } = render(<StatusBar {...baseProps} />);
 
     const indicators = container.querySelectorAll(".status-indicator--ok");
     expect(indicators.length).toBeGreaterThanOrEqual(1);
@@ -134,12 +93,7 @@ describe("StatusBar", () => {
 
   it("should use red indicator for unhealthy backend", () => {
     const { container } = render(
-      <StatusBar
-        backendReady={false}
-        wsConnected={true}
-        deviceCount={0}
-        simState="idle"
-      />,
+      <StatusBar {...baseProps} backendReady={false} />,
     );
 
     const indicators = container.querySelectorAll(".status-indicator--error");
@@ -148,28 +102,10 @@ describe("StatusBar", () => {
 
   it("should use warning indicator for disconnected WebSocket", () => {
     const { container } = render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={false}
-        deviceCount={0}
-        simState="idle"
-      />,
+      <StatusBar {...baseProps} wsConnected={false} />,
     );
 
     const indicators = container.querySelectorAll(".status-indicator--warn");
     expect(indicators.length).toBe(1);
-  });
-
-  it("should display unknown states as-is", () => {
-    render(
-      <StatusBar
-        backendReady={true}
-        wsConnected={true}
-        deviceCount={0}
-        simState="custom_state"
-      />,
-    );
-
-    expect(screen.getByText("Simulation: custom_state")).toBeInTheDocument();
   });
 });
