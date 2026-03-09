@@ -6,7 +6,7 @@ Supports **iOS 14–18**, including iOS 17+ RemoteXPC tunnel mode.
 
 ---
 
-Hi，我是 Yannis，電機系剛畢業的軟體工程師～不定時做一些小廢物工具放在這裡 👾
+Hi，我是 Yannis，電機系剛畢業的軟體工程師～不定時做一些小廢物 👾
 
 如果這個工具有幫到你，請我喝杯咖啡的話我會非常開心 ☕
 
