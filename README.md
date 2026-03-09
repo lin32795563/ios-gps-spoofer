@@ -16,7 +16,7 @@
 
 A desktop application for simulating GPS location on iOS devices. Built with **Electron + React + TypeScript** (frontend) and **Python FastAPI** (backend).
 
-Supports **iOS 14–18**, including iOS 17+ RemoteXPC tunnel mode.
+Supports **iOS 14–26**, including iOS 17+ RemoteXPC tunnel mode.
 
 ---
 
