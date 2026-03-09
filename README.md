@@ -174,6 +174,16 @@ Use the search bar (top-right of the map) to find locations by:
 
 ---
 
+## Support
+
+If this tool has been helpful to you, consider buying me a coffee — it keeps the development going!
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-☕%20Support-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/yannis_lin)
+
+Sponsorship is entirely voluntary and does not affect access to any features.
+
+---
+
 ## License
 
 MIT
