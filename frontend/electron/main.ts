@@ -32,6 +32,7 @@ const TUNNELD_URL = `http://${TUNNELD_HOST}:${TUNNELD_PORT}`;
 
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
+let tunneldProcess: ChildProcess | null = null;
 let isQuitting = false;
 
 /**
@@ -44,6 +45,49 @@ function findPythonPath(): string {
     ? path.join(projectRoot, ".venv", "Scripts", "python.exe")
     : path.join(projectRoot, ".venv", "bin", "python");
   return venvPython;
+}
+
+/**
+ * Find the pymobiledevice3 executable in the project's virtual environment.
+ */
+function findPymobiledevice3Path(): string {
+  const projectRoot = path.resolve(__dirname, "..", "..");
+  const isWin = process.platform === "win32";
+  return isWin
+    ? path.join(projectRoot, ".venv", "Scripts", "pymobiledevice3.exe")
+    : path.join(projectRoot, ".venv", "bin", "pymobiledevice3");
+}
+
+/**
+ * Start tunneld as a managed child process.
+ */
+function startTunneld(): void {
+  const pymobilePath = findPymobiledevice3Path();
+  tunneldProcess = spawn(pymobilePath, ["remote", "tunneld"], {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  tunneldProcess.on("error", (err) => {
+    console.error("Failed to start tunneld:", err.message);
+  });
+  tunneldProcess.on("exit", (code) => {
+    if (!isQuitting) {
+      console.warn(`tunneld exited unexpectedly (code ${code})`);
+    }
+    tunneldProcess = null;
+  });
+  console.log("tunneld started (pid:", tunneldProcess.pid, ")");
+}
+
+/**
+ * Stop the tunneld process.
+ */
+function stopTunneld(): void {
+  if (tunneldProcess && !tunneldProcess.killed) {
+    tunneldProcess.kill();
+    tunneldProcess = null;
+    console.log("tunneld stopped");
+  }
 }
 
 /**
@@ -215,31 +259,14 @@ ipcMain.handle("get-ws-url", () => {
 // ------------------------------------------------------------------
 
 app.on("ready", async () => {
-  // Step 1: Check tunneld
+  // Step 1: Start tunneld (if not already running externally)
   const tunneldRunning = await checkTunneld();
-  if (!tunneldRunning) {
-    console.warn(
-      "WARNING: tunneld is not running at " + TUNNELD_URL + ". " +
-      "iOS 17+ devices will not be detected. " +
-      "Start it with: pymobiledevice3 remote tunneld (as admin)"
-    );
-
-    // Show a dialog to inform the user
-    dialog.showMessageBoxSync({
-      type: "warning",
-      title: "Tunneld Not Running",
-      message:
-        "The tunneld service is not running.\n\n" +
-        "iOS 17+ devices (including iPhone 15/16/17) require tunneld.\n\n" +
-        "Please open a terminal as Administrator and run:\n" +
-        "pymobiledevice3 remote tunneld\n\n" +
-        "The app will continue, but only iOS 14-16 devices will work via USB.",
-      buttons: ["Continue Anyway", "Quit"],
-      defaultId: 0,
-      cancelId: 1,
-    }) === 1 && app.quit();
+  if (tunneldRunning) {
+    console.log("tunneld already running at " + TUNNELD_URL);
   } else {
-    console.log("tunneld is running at " + TUNNELD_URL);
+    startTunneld();
+    // Give tunneld a moment to initialize
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
   // Step 2: Start backend
@@ -272,4 +299,5 @@ app.on("activate", () => {
 app.on("before-quit", () => {
   isQuitting = true;
   stopBackend();
+  stopTunneld();
 });

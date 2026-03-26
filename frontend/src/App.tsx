@@ -493,6 +493,13 @@ function App() {
     }
   }, [firstSelectedUdid, updateSession]);
 
+  const handleUndoLastPoint = useCallback(() => {
+    if (firstSelectedUdid) {
+      const session = deviceSessions.get(firstSelectedUdid) ?? createDefaultSession();
+      updateSession(firstSelectedUdid, { pathPoints: session.pathPoints.slice(0, -1) });
+    }
+  }, [firstSelectedUdid, deviceSessions, updateSession]);
+
   const handleToggleDrawPath = useCallback(() => {
     if (firstSelectedUdid) {
       const session = deviceSessions.get(firstSelectedUdid) ?? createDefaultSession();
@@ -540,6 +547,7 @@ function App() {
           onClearLocation={handleClearLocation}
           onToggleDrawPath={handleToggleDrawPath}
           onClearPath={handleClearPath}
+          onUndoLastPoint={handleUndoLastPoint}
           onGPXLoad={handleGPXLoad}
           onAddFavorite={handleAddFavorite}
           onRemoveFavorite={handleRemoveFavorite}

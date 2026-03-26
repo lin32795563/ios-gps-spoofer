@@ -25,6 +25,7 @@ interface ControlPanelProps {
   onClearLocation: () => void;
   onToggleDrawPath: () => void;
   onClearPath: () => void;
+  onUndoLastPoint: () => void;
   onGPXLoad: (content: string) => void;
   onAddFavorite: (name: string, lat: number, lng: number) => void;
   onRemoveFavorite: (fav: FavoriteLocation) => void;
@@ -115,6 +116,7 @@ export function ControlPanel({
   onClearLocation,
   onToggleDrawPath,
   onClearPath,
+  onUndoLastPoint,
   onGPXLoad,
   onAddFavorite,
   onRemoveFavorite,
@@ -243,6 +245,16 @@ export function ControlPanel({
             {pathPointCount > 0 && (
               <div className="path-info">
                 <span>{pathPointCount} 個路徑點</span>
+                {isDrawingPath && (
+                  <button
+                    type="button"
+                    className="btn btn--small btn--secondary"
+                    onClick={onUndoLastPoint}
+                    disabled={isSimRunning}
+                  >
+                    復原上一點
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn btn--small btn--secondary"
