@@ -1,3 +1,7 @@
+# Local project docs (not for public repo)
+CONSTITUTION.md
+CHANGELOG.md
+
 # Python
 __pycache__/
 *.py[cod]
