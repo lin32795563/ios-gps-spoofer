@@ -50,7 +50,7 @@ describe("DevicePanel", () => {
     render(<DevicePanel {...emptyProps} />);
 
     expect(screen.getByText("尚未連接任何裝置")).toBeInTheDocument();
-    expect(screen.getByText(/請透過 USB 連接 iOS 裝置/)).toBeInTheDocument();
+    expect(screen.getByText(/請透過 USB 或 WiFi 連接 iOS 裝置/)).toBeInTheDocument();
   });
 
   it("should not show select all/none when empty", () => {

@@ -38,6 +38,7 @@ Design decisions
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import platform
 import threading
@@ -358,23 +359,23 @@ class DeviceManager:
             DevicePairingError: If the device is not trusted.
             UnsupportedIOSVersionError: If the iOS version is below 14.0.
         """
-        # First try USB devices (iOS 14-16)
-        mux_devices = self._enumerate_usb_devices()
+        # First try usbmux devices (USB and WiFi, iOS 14-16)
+        mux_devices = self._enumerate_usbmux_devices()
 
-        # If a UDID is specified, check USB first
+        # If a UDID is specified, check usbmux first
         if udid is not None:
             for device in mux_devices:
                 if device.serial == udid:
-                    return self._connect_usb_device(device.serial)
+                    return self._connect_usbmux_device(device.serial)
 
-            # Not found on USB -- try tunneld (iOS 17+)
+            # Not found on usbmux -- try tunneld (iOS 17+)
             return self._connect_tunneld_device(udid)
 
-        # No UDID specified -- try first USB device
+        # No UDID specified -- try first usbmux device
         if mux_devices:
-            return self._connect_usb_device(mux_devices[0].serial)
+            return self._connect_usbmux_device(mux_devices[0].serial)
 
-        # No USB devices -- try first tunneld device
+        # No usbmux devices -- try first tunneld device
         tunneld_rsds = self._query_tunneld_devices()
         if tunneld_rsds:
             first_rsd = tunneld_rsds[0]
@@ -441,13 +442,13 @@ class DeviceManager:
         """
         current_udids: set[str] = set()
 
-        # Phase 1: USB devices (iOS 14-16)
+        # Phase 1: usbmux devices (USB + WiFi, iOS 14-16)
         try:
-            mux_devices = self._enumerate_usb_devices()
+            mux_devices = self._enumerate_usbmux_devices()
             for d in mux_devices:
                 current_udids.add(d.serial)
         except Exception:
-            logger.exception("Failed to enumerate USB devices")
+            logger.exception("Failed to enumerate usbmux devices")
 
         # Phase 2: Tunneld devices (iOS 17+)
         try:
@@ -501,7 +502,7 @@ class DeviceManager:
     def _auto_connect_device(self, udid: str) -> DeviceConnection:
         """Auto-connect a device found during polling.
 
-        Tries USB first, then tunneld.
+        Tries usbmux (USB + WiFi) first, then tunneld.
 
         Args:
             udid: The device UDID.
@@ -509,12 +510,12 @@ class DeviceManager:
         Returns:
             The ``DeviceConnection``.
         """
-        # Check USB
+        # Check usbmux (USB and WiFi)
         try:
-            mux_devices = self._enumerate_usb_devices()
+            mux_devices = self._enumerate_usbmux_devices()
             for d in mux_devices:
                 if d.serial == udid:
-                    return self._connect_usb_device(udid)
+                    return self._connect_usbmux_device(udid)
         except Exception:
             pass
 
@@ -525,8 +526,8 @@ class DeviceManager:
     # Internal: USB connection sequence (iOS 14-16)
     # ------------------------------------------------------------------
 
-    def _connect_usb_device(self, udid: str) -> DeviceConnection:
-        """Run the full USB connection sequence for a device.
+    def _connect_usbmux_device(self, udid: str) -> DeviceConnection:
+        """Run the full connection sequence for a usbmux device (USB or WiFi).
 
         Steps:
         1. Create lockdown client
@@ -557,7 +558,7 @@ class DeviceManager:
                 udid, device_info.product_version
             ) from exc
 
-        # If this is iOS 17+, we should use tunneld instead of USB lockdown
+        # If this is iOS 17+, we should use tunneld instead of usbmux lockdown
         if ios_category == IOSVersionCategory.TUNNEL:
             self._close_lockdown_client(lockdown)
             return self._connect_tunneld_device(udid, device_info=device_info)
@@ -972,8 +973,8 @@ class DeviceManager:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _enumerate_usb_devices() -> list[MuxDevice]:
-        """Return the list of USB-connected iOS devices via usbmux.
+    def _enumerate_usbmux_devices() -> list[MuxDevice]:
+        """Return the list of iOS devices visible via usbmux (USB and/or WiFi).
 
         Returns:
             List of ``MuxDevice`` objects from pymobiledevice3.
@@ -982,12 +983,9 @@ class DeviceManager:
             DeviceConnectionError: If usbmux communication fails entirely.
         """
         try:
-            devices = usbmux_list_devices()
-            # Filter to USB-only (exclude network/WiFi devices)
-            usb_devices = [d for d in devices if d.is_usb]
-            return usb_devices
+            return asyncio.run(usbmux_list_devices())
         except (MuxException, ConnectionRefusedError, OSError) as exc:
-            logger.error("Failed to enumerate USB devices: %s", exc)
+            logger.error("Failed to enumerate usbmux devices: %s", exc)
             raise DeviceConnectionError(
                 "usbmux",
                 f"Cannot communicate with usbmux daemon: {exc}. "

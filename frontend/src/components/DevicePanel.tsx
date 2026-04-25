@@ -113,7 +113,7 @@ export function DevicePanel({
         <div className="empty-state">
           <p>尚未連接任何裝置</p>
           <p className="empty-hint">
-            請透過 USB 連接 iOS 裝置
+            請透過 USB 或 WiFi 連接 iOS 裝置
           </p>
         </div>
       )}

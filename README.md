@@ -39,7 +39,7 @@ Supports **iOS 14–26**, including iOS 17+ RemoteXPC tunnel mode.
 |------|---------|
 | OS | Windows 10 or later |
 | iPhone | iOS 14 or later |
-| Connection | USB cable (Lightning or USB-C) |
+| Connection | USB cable (Lightning or USB-C) or WiFi (after initial USB pairing) |
 | Software | iTunes (for Apple Mobile Device USB drivers) |
 | Python | 3.11 or later |
 | Node.js | 18 or later |
@@ -120,6 +120,15 @@ This may take a few minutes the first time.
 2. Tap **Trust** on the device when prompted, then enter your passcode
 3. **iOS 16+**: Go to **Settings → Privacy & Security → Developer Mode** and enable it
 
+#### Using WiFi (optional, after initial USB setup)
+
+Once paired over USB, you can connect wirelessly:
+
+1. Open iTunes → select your device → Summary tab
+2. Check **"Sync with this iPhone over Wi-Fi"**
+3. Make sure your iPhone and PC are on the same network
+4. Unplug the USB cable — the app will detect your iPhone automatically over WiFi
+
 ### iOS 17+ Additional Step — Start Tunneld
 
 Open a terminal **as Administrator** and run:
@@ -187,7 +196,7 @@ Use the search bar (top-right of the map) to find locations by:
 | Method | How |
 |--------|-----|
 | Button | Click **Restore Real Location** in the control panel |
-| Unplug | Disconnect the USB cable (location restores within seconds) |
+| Unplug | Disconnect the USB cable if connected (location restores within seconds) |
 | Restart | Restart the iPhone |
 
 ---
@@ -196,7 +205,7 @@ Use the search bar (top-right of the map) to find locations by:
 
 | Problem | Solution |
 |---------|----------|
-| Device not detected | Check USB cable, trust the computer on the device, ensure iTunes drivers are installed; for iOS 17+, confirm `tunneld` is running as Administrator |
+| Device not detected | For USB: check cable and ensure the device is trusted. For WiFi: ensure both devices are on the same network and WiFi Sync is enabled in iTunes. Ensure iTunes drivers are installed; for iOS 17+, confirm `tunneld` is running as Administrator |
 | Teleport not working | Ensure the device status shows green; if DVT session times out, stop and retry |
 | Map not loading | Check your internet connection and firewall — map tiles are served from `tiles.openfreemap.org` |
 | GPS snaps back to real location | Use realistic speeds and avoid pausing simulation for extended periods |

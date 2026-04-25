@@ -22,7 +22,7 @@ from tests.test_device_manager import (
     _make_mock_mux_device,
 )
 
-_PATCH_ENUM = "ios_gps_spoofer.device.device_manager.DeviceManager._enumerate_usb_devices"
+_PATCH_ENUM = "ios_gps_spoofer.device.device_manager.DeviceManager._enumerate_usbmux_devices"
 _PATCH_CREATE = "ios_gps_spoofer.device.device_manager.create_using_usbmux"
 _PATCH_MOUNTER = "pymobiledevice3.services.mobile_image_mounter.MobileImageMounterService"
 

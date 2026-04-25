@@ -45,11 +45,14 @@ const defaultHandlers = {
   onSpeedChange: vi.fn(),
   onClearLocation: vi.fn(),
   onToggleDrawPath: vi.fn(),
+  onUndoLastPoint: vi.fn(),
   onClearPath: vi.fn(),
   onGPXLoad: vi.fn(),
   onAddFavorite: vi.fn(),
   onRemoveFavorite: vi.fn(),
   onSelectFavorite: vi.fn(),
+  onToggleWasd: vi.fn(),
+  onWasdStepChange: vi.fn(),
 };
 
 const baseProps = {
@@ -63,6 +66,9 @@ const baseProps = {
   favorites: [] as FavoriteLocation[],
   deviceSessions: new Map<string, DeviceSessionState>(),
   selectedUdids: new Set<string>(),
+  wasdActive: false,
+  wasdStepMeters: 5,
+  wasdPressedKeys: new Set<string>(),
   ...defaultHandlers,
 };
 

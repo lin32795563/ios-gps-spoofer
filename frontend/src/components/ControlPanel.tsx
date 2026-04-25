@@ -1,4 +1,5 @@
 import { useCallback, useRef } from "react";
+import { TICK_MS } from "../hooks/useWasdControl";
 import type {
   DeviceSessionState,
   FavoriteLocation,
@@ -17,6 +18,9 @@ interface ControlPanelProps {
   favorites: FavoriteLocation[];
   deviceSessions: Map<string, DeviceSessionState>;
   selectedUdids: Set<string>;
+  wasdActive: boolean;
+  wasdStepMeters: number;
+  wasdPressedKeys: Set<string>;
   onStartSimulation: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -30,6 +34,8 @@ interface ControlPanelProps {
   onAddFavorite: (name: string, lat: number, lng: number) => void;
   onRemoveFavorite: (fav: FavoriteLocation) => void;
   onSelectFavorite: (fav: FavoriteLocation) => void;
+  onToggleWasd: () => void;
+  onWasdStepChange: (step: number) => void;
 }
 
 const SPEED_PRESETS = [
@@ -108,6 +114,9 @@ export function ControlPanel({
   favorites,
   deviceSessions,
   selectedUdids,
+  wasdActive,
+  wasdStepMeters,
+  wasdPressedKeys,
   onStartSimulation,
   onPause,
   onResume,
@@ -121,6 +130,8 @@ export function ControlPanel({
   onAddFavorite,
   onRemoveFavorite,
   onSelectFavorite,
+  onToggleWasd,
+  onWasdStepChange,
 }: ControlPanelProps) {
   const gpxInputRef = useRef<HTMLInputElement>(null);
   const favoriteNameRef = useRef<HTMLInputElement>(null);
@@ -212,6 +223,47 @@ export function ControlPanel({
             >
               恢復真實定位
             </button>
+          </div>
+
+          {/* WASD 鍵盤操控 */}
+          <div className="control-section">
+            <h3 className="section-title">WASD 鍵盤操控</h3>
+            <button
+              type="button"
+              className={`btn ${wasdActive ? "btn--danger" : "btn--primary"}`}
+              onClick={onToggleWasd}
+              disabled={isSimRunning}
+            >
+              {wasdActive ? "關閉 WASD" : "開啟 WASD"}
+            </button>
+            {wasdActive && (
+              <>
+                <div className="wasd-display">
+                  <div className="wasd-row">
+                    <div className={`wasd-key ${wasdPressedKeys.has("w") ? "wasd-key--active" : ""}`}>W</div>
+                  </div>
+                  <div className="wasd-row">
+                    <div className={`wasd-key ${wasdPressedKeys.has("a") ? "wasd-key--active" : ""}`}>A</div>
+                    <div className={`wasd-key ${wasdPressedKeys.has("s") ? "wasd-key--active" : ""}`}>S</div>
+                    <div className={`wasd-key ${wasdPressedKeys.has("d") ? "wasd-key--active" : ""}`}>D</div>
+                  </div>
+                </div>
+                <div className="wasd-step-control">
+                  <span className="wasd-step-label">
+                    步距：{wasdStepMeters}m（≈{((wasdStepMeters / TICK_MS) * 1000 * 3.6).toFixed(0)} km/h）
+                  </span>
+                  <input
+                    type="range"
+                    className="speed-slider"
+                    min={1}
+                    max={50}
+                    step={1}
+                    value={wasdStepMeters}
+                    onChange={(e) => onWasdStepChange(parseInt(e.target.value, 10))}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* 路徑模擬 */}

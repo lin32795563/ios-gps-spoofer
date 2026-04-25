@@ -12,6 +12,7 @@ import { MapView } from "./components/MapView";
 import { StatusBar } from "./components/StatusBar";
 import { ToastContainer } from "./components/Toast";
 import { useToast } from "./hooks/useToast";
+import { useWasdControl } from "./hooks/useWasdControl";
 import * as api from "./services/apiClient";
 import { WebSocketClient } from "./services/wsClient";
 import type {
@@ -34,6 +35,11 @@ function App() {
 
   // Picked location (shared across devices -- user picks on map)
   const [pickedLocation, setPickedLocation] = useState<Coordinate | null>(null);
+
+  // WASD keyboard control
+  const [wasdActive, setWasdActive] = useState(false);
+  const [wasdStepMeters, setWasdStepMeters] = useState(5);
+  const wasdPosRef = useRef<Coordinate | null>(null);
 
   // Favorites
   const [favorites, setFavorites] = useState<FavoriteLocation[]>([]);
@@ -493,6 +499,45 @@ function App() {
     }
   }, [firstSelectedUdid, updateSession]);
 
+  // Keep wasdPosRef in sync with active device's current location
+  useEffect(() => {
+    if (activeSession?.currentLocation) {
+      wasdPosRef.current = activeSession.currentLocation;
+    }
+  }, [activeSession?.currentLocation]);
+
+  const handleWasdMove = useCallback(
+    (deltaLat: number, deltaLng: number) => {
+      if (selectedUdids.size === 0) return;
+      const cur = wasdPosRef.current;
+      if (!cur) return;
+
+      let newLng = cur.longitude + deltaLng;
+      newLng = ((newLng + 180) % 360 + 360) % 360 - 180;
+      const newPos: Coordinate = {
+        latitude: Math.max(-90, Math.min(90, cur.latitude + deltaLat)),
+        longitude: newLng,
+      };
+      wasdPosRef.current = newPos;
+
+      for (const udid of selectedUdids) {
+        updateSession(udid, { currentLocation: newPos });
+      }
+      for (const udid of selectedUdids) {
+        api.setLocation(udid, newPos.latitude, newPos.longitude).catch((err) => console.error("WASD setLocation failed:", err));
+      }
+    },
+    [selectedUdids, updateSession],
+  );
+
+  const handleToggleWasd = useCallback(() => {
+    setWasdActive((prev) => !prev);
+  }, []);
+
+  const handleWasdStepChange = useCallback((step: number) => {
+    setWasdStepMeters(step);
+  }, []);
+
   const handleUndoLastPoint = useCallback(() => {
     if (firstSelectedUdid) {
       const session = deviceSessions.get(firstSelectedUdid) ?? createDefaultSession();
@@ -506,6 +551,13 @@ function App() {
       updateSession(firstSelectedUdid, { isDrawingPath: !session.isDrawingPath });
     }
   }, [firstSelectedUdid, deviceSessions, updateSession]);
+
+  const wasdPressedKeys = useWasdControl({
+    isActive: wasdActive,
+    stepMeters: wasdStepMeters,
+    currentPosRef: wasdPosRef,
+    onMove: handleWasdMove,
+  });
 
   // ------------------------------------------------------------------
   // Render
@@ -552,6 +604,11 @@ function App() {
           onAddFavorite={handleAddFavorite}
           onRemoveFavorite={handleRemoveFavorite}
           onSelectFavorite={handleSelectFavorite}
+          wasdActive={wasdActive}
+          wasdStepMeters={wasdStepMeters}
+          wasdPressedKeys={wasdPressedKeys}
+          onToggleWasd={handleToggleWasd}
+          onWasdStepChange={handleWasdStepChange}
         />
       </div>
       <div className="main-content">

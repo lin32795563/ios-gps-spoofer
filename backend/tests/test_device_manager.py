@@ -41,7 +41,7 @@ from ios_gps_spoofer.device.exceptions import (
 from ios_gps_spoofer.device.models import ConnectionState, IOSVersionCategory
 
 # Patch targets
-_PATCH_ENUM = "ios_gps_spoofer.device.device_manager.DeviceManager._enumerate_usb_devices"
+_PATCH_ENUM = "ios_gps_spoofer.device.device_manager.DeviceManager._enumerate_usbmux_devices"
 _PATCH_CREATE = "ios_gps_spoofer.device.device_manager.create_using_usbmux"
 _PATCH_LIST = "ios_gps_spoofer.device.device_manager.usbmux_list_devices"
 _PATCH_MOUNTER = "pymobiledevice3.services.mobile_image_mounter.MobileImageMounterService"
@@ -175,23 +175,22 @@ class TestDeviceManagerInit:
 # USB Enumeration
 # =====================================================================
 
-class TestEnumerateUsbDevices:
-    """Tests for _enumerate_usb_devices static method."""
+class TestEnumerateUsbmuxDevices:
+    """Tests for _enumerate_usbmux_devices static method."""
 
     @patch(_PATCH_LIST)
-    def test_returns_usb_only_devices(self, mock_list: MagicMock) -> None:
+    def test_returns_all_devices_by_default(self, mock_list: MagicMock) -> None:
         usb_dev = _make_mock_mux_device("aaa", is_usb=True)
         wifi_dev = _make_mock_mux_device("bbb", is_usb=False)
         mock_list.return_value = [usb_dev, wifi_dev]
 
-        result = DeviceManager._enumerate_usb_devices()
-        assert len(result) == 1
-        assert result[0].serial == "aaa"
+        result = DeviceManager._enumerate_usbmux_devices()
+        assert len(result) == 2
 
     @patch(_PATCH_LIST)
     def test_returns_empty_when_no_devices(self, mock_list: MagicMock) -> None:
         mock_list.return_value = []
-        result = DeviceManager._enumerate_usb_devices()
+        result = DeviceManager._enumerate_usbmux_devices()
         assert result == []
 
     @patch(_PATCH_LIST)
@@ -202,7 +201,7 @@ class TestEnumerateUsbDevices:
 
         mock_list.side_effect = MuxException()
         with pytest.raises(DeviceConnectionError, match="usbmux"):
-            DeviceManager._enumerate_usb_devices()
+            DeviceManager._enumerate_usbmux_devices()
 
     @patch(_PATCH_LIST)
     def test_os_error_raises_device_connection_error(
@@ -210,7 +209,7 @@ class TestEnumerateUsbDevices:
     ) -> None:
         mock_list.side_effect = OSError("connection refused")
         with pytest.raises(DeviceConnectionError):
-            DeviceManager._enumerate_usb_devices()
+            DeviceManager._enumerate_usbmux_devices()
 
 
 # =====================================================================
